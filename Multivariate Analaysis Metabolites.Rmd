@@ -68,12 +68,6 @@ representing specific metabolic responses or interactions.
 
 ### 
 
-Using the rotation matrix and the standard deviation associated with
-principal component 1 compute the correlation of the first principal
-component score with the original variables. Give these correlations to
-2 dp, and display them in order from largest (most positive) to smallest
-(most negative). Your list of correlations should include the name of
-the metabolite for each entry.
 
 > 2. Using the rotation matrix and the standard deviation associated with principal component 1 compute the correlation of the first principal component score with the original variables
 
@@ -99,7 +93,6 @@ relationship with its variation.
 Therefore :
 
 > 3. An advantage of whey protein is that it contains "essential amino acids" (which must come from the diet). The measured metabolites that were shown to be affected by the meal consumed included the essential amino acids L.Histidine, L.Isoleucine, L.Leucine, L.Lysine, L.Methionine, L.Phenylalanine, and L.Tryptophan. 
-> Comment on the extent to which the first principal component score is a good summary of the change in plasma levels of these amino acids.
 
 The first principal component is a good summary of the change in plasma
 levels of ...
