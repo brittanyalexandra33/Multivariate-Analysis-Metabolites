@@ -1,0 +1,350 @@
+---
+title: "Multivariate Analysis on Metabolites"
+author: "Brittany Alexandra"
+date: "Wednesday 15 March 2023`"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggfortify)
+library(readr)
+library(FactoMineR)
+library(factoextra)
+library(gridExtra)
+library(tibble)
+library(knitr)
+```
+
+# Introduction
+
+This is an exploratory analysis of metabolites affected by whey
+consumption utilizing a relatively clean dataset. As someone with a love
+for biology and the gym, this was a fascinating dataset to analyse, and
+a great test on my understanding of multivariate analysis techniques.
+
+# Findings
+
+Certain metabolites contributed significantly to the variance in this
+analysis, indicating their significant reactions to whey consumption.
+These included L.Histidine, L.Isoleucine, L.Leucine, L.Lysine,
+L.Methionine, L.Phenylalanine, and L.Tryptophan.
+
+Each of these Amino Acids participate in metabolic pathways. Therefore,
+understanding how they are influenced provides a foundation for further
+investigation in how to enhance, or reduce these Amino Acids and their
+consequent biological consequences.
+
+For example;
+
+-   **L.Leucine** is renowned for its ability to activate mTOR
+    signaling, and is a central regulator of muscle protein synthesis.
+    It's involvement in this critical pathway underscores its
+    significance in the context of muscle growth and repair.
+
+-   **L.Tryptophan** serves as a precursor to serotonin, which is a
+    neurotransmitter crucial for mood regulation. L.Tryptophan wields
+    influence over our emotional well-being, and understanding how its
+    levels respond to whey protein consumption opens a window into
+    potential therapeutic avenues aimed at elevating serotonin levels
+    for mood enhancement.
+
+-   **L.Lysine** is involved in collagen formation, calcium absorption,
+    and the synthesis of carnitine, a molecule crucial for energy
+    production.Therefore, monitoring L.Lysine levels in response to whey
+    protein consumption can help understand its impact on skin health,
+    bone health, and energy metabolism.
+
+# Concerns 
+
+1.  This is a snapshot of data and therefore does not capture the
+    inherent individual variability
+2.  This snapshot of data was done in an isolated environment, and would
+    therefore be inaccurate to generalize to a wider population. Further
+    tests with a more diverse sample size representative of the
+    population would be required to generalise these results.
+3.  Limited time-frame thereby not accounting for variability into
+    metabolism and digestion over longer periods of time i.e. \>24
+    hours.
+
+# Background
+
+The "metab-selected.csv" file presents an intriguing snapshot from a
+study on whey protein beverages and their impact on blood metabolites
+(as detailed in Joblin-Mills et al., Frontiers in Clinical Diabetes).
+
+It captures the dynamic response of 52 significant metabolites to three
+beverage variants; a water-based control, a standard whey protein drink,
+and a double-concentration whey variant.
+
+These were tracked over key time intervals post-consumption. This
+dataset, with its log-transformed values, offers a window into
+understanding how dietary changes can distinctly alter metabolic
+profiles.
+
+# Statistical Analysis
+
+```{r}
+# Lets take a look at the data to get an understanding of it
+data <- read_csv("~/Desktop/metab-selected.csv")
+head(data)
+```
+
+## 1. Lets reduce the dimensional of our data to understand the structure and covariance of metabolites
+
+```{r}
+
+#Clean data
+data<-data[,-c(1:3)]
+data<-log(data)
+missing<-apply(is.na(data),2 , sum)
+data<-data[,missing==0]
+sd<-apply(data, 2, sd)
+data<-data[,sd>0.001]
+
+
+#Data matrix for simple, effective, but ugly plot 
+PCA<-prcomp(data, center=T, scale = T)
+# plot(PCA)
+
+# Limit the data to the first 8 principal components to not overwhelm 8 axis 
+variance_explained <- PCA$sdev^2 / sum(PCA$sdev^2)  # Proportion of variance explained by each PC
+
+# Create a dataframe with Principal Component and Variance Explained
+variance_df <- data.frame(
+  PrincipalComponent = 1:length(variance_explained),
+  VarianceExplained = variance_explained
+)
+
+variance_df <- variance_df[1:8,]
+
+# Create a bar chart for the first 6 principal components
+gg_var_plot <- ggplot(variance_df, aes(x = PrincipalComponent, y = VarianceExplained)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme_minimal() +
+  labs(title = "Variance Explained by the First 6 Principal Components",
+       subtitle = "Plot 1",
+       x = "Principal Component",
+       y = "Proportion of Variance Explained") +
+  geom_text(aes(label = scales::percent(VarianceExplained, accuracy = 1)), vjust = -0.5)
+
+# Print the bar chart
+print(gg_var_plot)
+
+# Assuming PCA is your PCA result object
+loadings <- as.data.frame(PCA$rotation[, 1])  # Extract loadings for PC1
+names(loadings) <- "Contribution"
+loadings$Variable <- rownames(loadings)
+
+# Create the bar plot
+ggplot(loadings, aes(x = reorder(Variable, Contribution), y = Contribution)) +
+  geom_bar(stat = "identity", col = "gray", position = position_dodge(width = 0.7), width = 0.7) +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "Contribution of Variables to PC1",
+       subtitle = "Plot 2",
+       x = "Variable",
+       y = "Contribution") +
+  geom_hline(yintercept = c(-0.2, 0.2), linetype = "dashed", color = c("red", "red"), size = 1)
+  #annotate("text", x = 1.5, y = 0.25, label = "Metabolites beyond -0.2 and 0.2 contribute significantly", color = "black", size = 4)
+
+
+```
+
+Overall, we can understand a large amount of variation from the first
+Principal Component (Plot 1). (PC summarizes the core differences or
+similarities within the data). This gives us a benchmark for
+investigating dominant underlying factors that are influencing the
+observed measurements.
+
+Metabolites beyond -0.2 and 0.2 contribute significantly to the variance
+(Plot 2).
+
+For further studies, isolating the top 10 metabolites and see how they
+react to whey consumption and the effects on the human body would be
+interesting.
+
+For instance, we can see Lysine contributes the most with \~0.25 of the
+variance coming from this metabolite. However, it is not surprising that
+lysine would contribute significantly to variability in a study
+involving metabolites. Lysine, being an essential Amino Aic, can only be
+obtained through dietary sources, and its availability in the body is
+directly influenced by dietary intake.
+
+**Notes**
+
+28.6% of the variability in blood metabolites following Whey Protein
+consumption is accounted for by the first principal component, and 9.5%
+for the second PC.
+
+What does this mean? Well, in PCA, each principal component represents a
+linear combination of the original variables. The first PC captures the
+most significant patterns of variation in the data, while the subsequent
+PCs capture the remaining variability in decreasing order of importance.
+
+As the first principal component explains 28.6% of the total
+variability, we can say it is responsible for a substantial portion of
+the patterns observed in the blood metabolites following Whey Protein
+consumption. This component likely represents the primary factor
+influencing the changes in metabolite levels.
+
+Similarly, the second principal component accounts for 9.5% of the
+variability. While it explains less variability compared to the first
+PC, it still captures a notable proportion of the patterns in the data.
+The second component likely represents additional factors that
+contribute to the variability in blood metabolites, possibly
+representing specific metabolic responses or interactions.
+
+## What variables were signifcantly affected by the meals post whey consumption?
+
+By understanding the variables that have a strong correlation with the
+first PC score, we can identify the metabolites most significant
+imapcted by whey consumption are:
+
+L.Histidine, L.Isoleucine, L.Leucine, L.Lysine, L.Methionine,
+L.Phenylalanine, and L.Tryptophan.
+
+```{r}
+# Coefficients and their strength with PC1
+coef1 <- round(PCA$rotation[, 1] * PCA$sdev[1], 2)
+variable_names <- names(coef1)
+
+coef_table <- data.frame(Variable = variable_names) # Create a data frame with a single "Variable" column
+coef_table$Coefficient <- coef1 # Create a new column for the coefficients
+sorted_coef_table <- coef_table[order(coef1, decreasing = TRUE), ] # Sort the table based on the coefficients
+
+# Remove the row numbers (index)
+rownames(sorted_coef_table) <- NULL
+
+# Create a nice table
+kable(sorted_coef_table, 
+      caption = "Coefficients and Their Strength with PC1",
+      align = "c",  
+      col.names = c("Variable", "Coefficient"),
+      format.args = list(big.mark = ",", scientific = FALSE),  # Formatting options
+      booktabs = TRUE)
+
+```
+
+**Notes**
+
+How was this identified?
+
+Using the rotation matrix and the standard deviation associated with
+principal component 1, I computed the correlation of the first principal
+component score with the original variables.
+
+The plot helps you see which original variables have the most impact on
+PC1 (those far to the right) and how their impact relates to how much
+they vary (higher or lower on the plot). It helps identify which
+variables are driving the patterns captured by PC1.
+
+Positive correlation: A positive correlation indicates that as the PC1
+score increases, the corresponding metabolite tends to increase as well.
+These metabolites are positively associated with PC1 and may contribute
+to its variation.
+
+Negative correlation: A negative correlation suggests that as the PC1
+score increases, the corresponding metabolite tends to decrease. These
+metabolites are negatively associated with PC1 and may have an inverse
+relationship with its variation.
+
+Therefore :
+
+The first principal component is a good summary of the change in plasma
+levels of ...
+
+-   L.Lysine as it accounts for 0.96 of its variability
+
+-   L.Tryptophan as it accounts for 0.91 of its variability
+
+-   L.Methionine as it accounts for 0.86 of its variability
+
+The first principal component is not the best summary of a change in
+plasma levels of ...
+
+-   L.Isoleucine as it accounts for 0.76 of its variability
+
+-   L-Histidine as it accounts for 0.73 of its variability
+
+The first principal component is not a very good summary of a change in
+plasma levels of ...
+
+-   L.Phenylalanine as it accounts for 0.41 of its variability
+
+-   L.Leucine as it accounts for 0.53 of its variability
+
+Principal components 2 and 3 may want to be investigated to explore the
+variability of the change in plasma levels for these metabolites.
+
+## What are the key difference in patterns between meals?
+
+```{r}
+# Make a plot of the first principal component score vs time, using a separate panel for each meal.
+data1 <- read_csv("~/Desktop/metab-selected.csv")
+PCA$x[,1]->PCA1
+
+# Create a separate plot for each meal using facet_wrap
+ggplot(data1, aes(x=Time, y=PCA1, color=Meal)) + 
+  geom_point() +
+  facet_wrap(vars(Meal)) +
+  xlab("Time") +
+  ylab("PC1 Score") +
+  ggtitle("PC1 Score vs Time by Meal")
+```
+
+-   Meal A has the lowest range of variability from about -2 to 5,
+    whereas Meal C has the largest range of variability from about -15
+    to 5.
+
+-   There is one outliier within Meal A which could be investigated
+    further. Meal A PC1 scores has a relatively linear trend throughout
+    the whole 250minutes.
+
+-   In contrast, Meal B PC1 scores have an initial decreasing trend
+    until around 75 minutes, where they begin to increase again until
+    250 minutes.
+
+-   Meal C has the largest range of where the scores decreasing trend
+    until about 125 minutes, where the scores begin to increase again
+    until 250 minutes.
+
+## Lets investigate the outlier at time 0, meal A (the control meal).
+
+```{r}
+# Subset data to only include rows where Time is 0
+d1<-data1 %>% 
+  mutate(PC1 = PCA1) %>%
+  filter(Time == 0, Meal == "A")
+
+which.min(d1$PC1)
+d1$Participant[24]
+```
+
+The outlier at time zero, Meal A (the control meal) corresponds LD4227.
+
+```{r}
+ggplot(data1, aes(x = Time, y = PCA1, color = Meal)) +
+  geom_line() +
+  facet_wrap(vars(Participant)) +
+  labs(x = "Time", y = "Score 1")
+```
+
+It is likely they are either...\
+a) a weird observation; b) a weird day (the whole time course for that
+meal is unusual); or c) a weird participant.
+
+Its likely the outlier from (5) could represent a weird participant.
+Those in Meal A were given a control (water), so the results from that
+experiment show participant's baseline blood metabolite levels (assuming
+they haven't eaten anything else).
+
+The outlier at LD4227 consistently displays an unusual deviation from
+the rest of the participants blood plasma levels across other Meal
+types. It is plausible that the outlier in (5) does not consume enough
+protein in their general diet, causing their blood metabolite levels to
+be extremely low.
